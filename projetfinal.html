@@ -1,0 +1,965 @@
+
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Portfolio Numérique Interactif</title>
+    <link href="https://cdn.jsdelivr.net/npm/tailwindcss@2.2.19/dist/tailwind.min.css" rel="stylesheet">
+    <script type="importmap">
+    {
+      "imports": {
+        "react": "https://esm.sh/react@^19.1.0",
+        "react-dom/": "https://esm.sh/react-dom@^19.1.0/",
+        "three": "https://esm.sh/three@^0.177.0",
+        "animejs": "https://esm.sh/animejs@3.2.1",
+        "react/": "https://esm.sh/react@^19.1.0/"
+      }
+    }
+    </script>
+    <style>
+        @import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700;800;900&display=swap');
+
+        :root {
+            --color-dark: #080808; /* Very dark grey, almost black */
+            --color-card: #101010; /* Dark grey for cards */
+            --color-secondary: #1A1A1A; /* Slightly lighter dark grey */
+            --color-primary: #C0C0C0; /* Silver */
+            --color-primary-hover: #E0E0E0; /* Lighter silver for hover */
+            --color-text: #B0B0B0; /* Light grey for main text */
+            --color-text-muted: #888888; /* Muted grey for secondary text */
+        }
+
+        body {
+            font-family: 'Inter', sans-serif;
+            background-color: var(--color-dark);
+            color: var(--color-text);
+            overflow-x: hidden;
+            scroll-behavior: smooth;
+        }
+
+        /* Custom Scrollbar for Webkit browsers */
+        ::-webkit-scrollbar {
+            width: 10px;
+        }
+        ::-webkit-scrollbar-track {
+            background: var(--color-dark);
+        }
+        ::-webkit-scrollbar-thumb {
+            background: var(--color-secondary);
+            border-radius: 5px;
+            border: 2px solid var(--color-dark);
+        }
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--color-primary);
+        }
+
+        .section {
+            min-height: calc(100vh - 70px); /* 70px is header height */
+            padding-top: 100px; /* Increased top padding to avoid overlap with fixed header */
+            padding-bottom: 60px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            align-items: center;
+            opacity: 0; /* For fade-in animation */
+        }
+        #accueil {
+             min-height: 100vh; /* Full viewport height for landing */
+             padding-top: 70px; /* Account for header */
+        }
+
+
+        .section-title {
+            font-size: 2.5rem; /* 40px */
+            line-height: 1.2;
+            font-weight: 800;
+            margin-bottom: 3rem; /* 48px */
+            position: relative;
+            display: inline-block;
+        }
+        
+        .section-title::after {
+            content: '';
+            position: absolute;
+            bottom: -10px;
+            left: 50%;
+            transform: translateX(-50%);
+            width: 60px;
+            height: 4px;
+            background-color: var(--color-primary-hover);
+            border-radius: 2px;
+        }
+
+        /* Glow Animation for Titles and Important Elements */
+        .animate-glow {
+            animation: glow 3s ease-in-out infinite alternate;
+        }
+
+        @keyframes glow {
+            from {
+                text-shadow: 0 0 5px var(--color-text-muted), 0 0 10px var(--color-text-muted), 0 0 15px var(--color-secondary);
+            }
+            to {
+                text-shadow: 0 0 10px var(--color-primary), 0 0 20px var(--color-primary), 0 0 30px var(--color-primary-hover);
+            }
+        }
+        
+        /* Tailwind CSS Custom Classes (can be defined here or in a separate CSS file imported by index.tsx) */
+        .bg-custom-dark { background-color: var(--color-dark); }
+        .bg-custom-card { background-color: var(--color-card); }
+        .border-custom-secondary { border-color: var(--color-secondary); }
+        .border-custom-card { border-color: var(--color-card); }
+        .text-custom-primary { color: var(--color-primary); }
+        .text-custom-primary-hover { color: var(--color-primary-hover); }
+        .text-custom-text { color: var(--color-text); }
+        .text-custom-text-muted { color: var(--color-text-muted); }
+        .hover\:bg-custom-primary-hover:hover { background-color: var(--color-primary-hover); }
+        .hover\:text-custom-primary-hover:hover { color: var(--color-primary-hover); }
+        .shadow-custom-primary\/40 { box-shadow: 0 0 15px 0 rgba(192, 192, 192, 0.4); } /* Silver shadow */
+        .focus\:ring-custom-primary\/50:focus { ring-color: rgba(192, 192, 192, 0.5); }
+        .border-custom-primary\/50 { border-color: rgba(192, 192, 192, 0.5); }
+        .hover\:border-custom-primary\/50:hover { border-color: rgba(192, 192, 192, 0.5); }
+        .hover\:shadow-custom-primary\/10:hover { box-shadow: 0 4px 15px 0 rgba(192, 192, 192, 0.1); }
+
+
+        #three-canvas {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            z-index: -10; /* Behind all content */
+            opacity: 0.2; /* Adjusted opacity for particle background */
+        }
+
+        /* Ensure content is above the canvas */
+        header, main, footer {
+            position: relative;
+            z-index: 1;
+        }
+        .group:hover .group-hover\:text-custom-primary-hover {
+            color: var(--color-primary-hover);
+        }
+    </style>
+</head>
+<body class="bg-custom-dark text-custom-text">
+    <canvas id="three-canvas"></canvas>
+    <div id="root">
+        <div style="position: fixed; inset: 0; background-color: var(--color-dark); display: flex; align-items: center; justify-content: center; color: var(--color-primary); font-size: 1.25rem; font-weight: 600; z-index: 100;">
+            Chargement du Portfolio Numérique Interactif...
+        </div>
+    </div>
+    <script type="module">
+      import React, { useState, useEffect, useRef, Suspense } from 'react';
+      import ReactDOM from 'react-dom/client';
+      import * as THREE from 'three';
+      import anime from 'animejs';
+
+      // --- START OF CONFIGURABLE VALUES ---
+      const PORTFOLIO_OWNER_NAME = "Leonard Dragomirasi"; 
+      const YOUR_COURSE = "ICS3U"; 
+      const SUBMISSION_DATE = "Année scolaire 2024-2025"; 
+      // --- END OF CONFIGURABLE VALUES ---
+
+      // Constants
+      const SECTIONS = [
+        { id: 'accueil', title: 'Accueil' },
+        { id: 'cheminement', title: 'Mon Cheminement en ICS3U' },
+        { id: 'certifications', title: 'Mes Certifications Techniques' },
+        { id: 'avenir', title: 'Mon Avenir dans le Médico-Technologique' },
+        { id: 'savoir-etre', title: 'Mes Compétences de Savoir-Être' },
+      ];
+
+      const CERTIFICATION_DATA = [
+        {
+          id: 'cpp',
+          name: 'Cisco NetAcad C++ Essentials',
+          image: 'cplusplus_essentials.png', 
+          completionDate: "13 juin 2025",
+          description: 'Une exploration approfondie des fondements de la programmation C++, couvrant la syntaxe, les structures de données avancées et les paradigmes de la programmation orientée objet.',
+          interests: "Ma fascination pour le C++ vient de sa capacité à offrir un contrôle fin sur les ressources système et sa performance brute. Dans le domaine médico-technologique, cela se traduit par la possibilité de développer des logiciels embarqués ultra-réactifs pour des appareils de monitoring vital ou des systèmes d'imagerie médicale précis, où chaque milliseconde compte.",
+          learned: "Au-delà de la syntaxe de base, j'ai assimilé la gestion de la mémoire (pointeurs, références, allocation dynamique), les templates pour la programmation générique, l'héritage et le polymorphisme en POO, la gestion des exceptions, les flux d'entrée/sortie (I/O streams), et une introduction à la Standard Template Library (STL) notamment les conteneurs (vectors, lists, maps) et les algorithmes.",
+          applications: "Développement de micrologiciels pour pacemakers ou pompes à insuline, modules de traitement d'image en temps réel pour endoscopies, algorithmes d'analyse pour électrocardiogrammes (ECG) ou électroencéphalogrammes (EEG), systèmes d'exploitation temps réel pour équipements chirurgicaux assistés par ordinateur.",
+          impact: "Cette certification C++ est fondamentale. Elle m'a non seulement enseigné un langage puissant, mais aussi une rigueur de pensée et une compréhension de l'architecture logicielle bas niveau. C'est un socle indispensable pour innover dans des applications médico-technologiques critiques qui exigent fiabilité et efficacité maximales."
+        },
+        {
+          id: 'html',
+          name: 'Cisco NetAcad HTML Essentials',
+          image: 'html_essentials.png', 
+          completionDate: "11 avril 2025",
+          description: 'Maîtrise des principes fondamentaux du HTML5 pour la création de contenu web sémantiquement riche, accessible et bien structuré.',
+          interests: "L'HTML est la pierre angulaire du web. Mon intérêt réside dans la création d'interfaces claires et intuitives pour des applications de santé, comme des portails patients sécurisés ou des tableaux de bord pour les professionnels de santé. Une structure HTML sémantique garantit l'accessibilité, ce qui est primordial dans le domaine médical pour que l'information soit disponible à tous.",
+          learned: "J'ai approfondi la structuration sémantique avec HTML5 (main, aside, figure, figcaption), la création de formulaires complexes et accessibles (avec validation intégrée), l'intégration de Rich Media (audio, video, canvas), les microdonnées (Schema.org) pour un meilleur SEO et interopérabilité, et les bonnes pratiques pour l'accessibilité web (ARIA roles).",
+          applications: "Conception de l'architecture de contenu pour des dossiers médicaux électroniques (DME) accessibles via le web, développement de plateformes d'e-learning pour la formation continue des professionnels de santé, création de sites d'information médicale conformes aux standards d'accessibilité (WCAG).",
+          impact: "Comprendre HTML en profondeur me permet de construire des fondations solides pour des applications web robustes et inclusives. C'est une compétence essentielle pour assurer que les solutions médico-technologiques que je pourrais développer soient non seulement fonctionnelles mais aussi universellement utilisables et pérennes."
+        },
+        {
+          id: 'js',
+          name: 'Cisco NetAcad JavaScript Essentials',
+          image: 'javascript_essentials.png', 
+          completionDate: "15 avril 2025",
+          description: 'Introduction aux concepts clés de JavaScript pour le développement d\'applications web interactives et dynamiques côté client.',
+          interests: "JavaScript donne vie au web. Ce qui me passionne, c'est sa capacité à créer des expériences utilisateur fluides et réactives. Dans le contexte médico-technologique, je pense aux interfaces de visualisation de données médicales en temps réel, aux applications mobiles de suivi de santé, ou aux outils interactifs d'aide à la décision pour les médecins.",
+          learned: "J'ai maîtrisé la manipulation avancée du DOM, la gestion d'événements, les concepts d'asynchronisme (Promises, async/await) pour interagir avec des API (par exemple, pour récupérer des données de santé), la programmation orientée objet en JavaScript (prototypes, classes ES6), les modules ES6, et l'utilisation de JSON pour l'échange de données. J'ai aussi eu une introduction aux concepts de frameworks front-end.",
+          applications: "Développement d'interfaces graphiques pour des moniteurs de signes vitaux affichant des données en streaming, création d'applications web progressives (PWA) pour le suivi de traitements ou la prise de rendez-vous, modules de visualisation de données pour l'analyse d'imagerie médicale (DICOM viewers légers), outils de gamification pour la rééducation physique.",
+          impact: "Cette certification JavaScript est cruciale car elle ouvre la voie au développement d'applications web modernes et interactives. Elle est la clé pour transformer des données médicales brutes en informations exploitables et engageantes pour les patients et les professionnels, améliorant ainsi l'efficacité et l'accessibilité des soins."
+        }
+      ];
+
+      // Helper Functions
+      const smoothScrollTo = (id) => {
+        const element = document.getElementById(id);
+        if (element) {
+          (anime)({ 
+            targets: document.documentElement,
+            scrollTop: element.offsetTop - 70, 
+            duration: 1000,
+            easing: 'easeInOutQuad'
+          });
+        }
+      };
+
+      // Components
+      const Header = ({ activeSection, onNavigate }) => {
+        const titleRef = useRef(null);
+        const navRef = useRef(null);
+
+        useEffect(() => {
+          if (titleRef.current) {
+            (anime)({ 
+              targets: titleRef.current,
+              opacity: [0, 1],
+              translateY: [-25, 0],
+              duration: 900,
+              easing: 'easeOutExpo'
+            });
+          }
+          if (navRef.current) {
+            (anime)({ 
+              targets: navRef.current.children,
+              opacity: [0, 1],
+              translateY: [-20, 0],
+              duration: 700,
+              delay: anime.stagger(120, { start: 250 }), 
+              easing: 'easeOutExpo'
+            });
+          }
+        }, []);
+
+        return (
+          React.createElement("header", { className: "fixed top-0 left-0 right-0 z-50 bg-custom-dark/80 backdrop-blur-md shadow-2xl border-b border-custom-card/60" },
+            React.createElement("nav", { className: "container mx-auto px-6 py-3.5 flex justify-between items-center" },
+              React.createElement("div", {
+                ref: titleRef,
+                className: "text-xl md:text-2xl font-bold text-custom-primary cursor-pointer hover:text-custom-primary-hover transition-colors duration-300",
+                onClick: () => onNavigate('accueil'),
+                "aria-label": `Portfolio de ${PORTFOLIO_OWNER_NAME}, page d'accueil`,
+                role: "button",
+                tabIndex: 0
+              }, PORTFOLIO_OWNER_NAME),
+              React.createElement("ul", { ref: navRef, className: "flex space-x-5 md:space-x-7 items-center" },
+                SECTIONS.map((section) => (
+                  React.createElement("li", { key: section.id },
+                    React.createElement("button", {
+                      onClick: () => onNavigate(section.id),
+                      className: `text-xs md:text-sm font-medium transition-all duration-300 relative group ${
+                        activeSection === section.id
+                          ? 'text-custom-primary-hover'
+                          : 'text-custom-text hover:text-custom-primary-hover'
+                      }`,
+                      "aria-current": activeSection === section.id ? 'page' : undefined
+                    },
+                      section.title,
+                      React.createElement("span", { className: `absolute bottom-[-5px] left-0 h-[3px] bg-custom-primary-hover transition-all duration-350 ease-out-quint ${activeSection === section.id ? 'w-full opacity-100' : 'w-0 opacity-0 group-hover:w-full group-hover:opacity-100'}` })
+                    )
+                  )
+                ))
+              )
+            )
+          )
+        );
+      };
+
+      const Section = ({ id, title, children }) => {
+        const sectionRef = useRef(null);
+
+        useEffect(() => {
+          const currentRef = sectionRef.current;
+          if (!currentRef) return;
+
+          const observer = new IntersectionObserver(
+            ([entry]) => {
+              if (entry.isIntersecting) {
+                (anime)({ 
+                  targets: entry.target,
+                  opacity: [0, 1],
+                  translateY: [60, 0],
+                  rotateX: [-10, 0],
+                  scale: [0.97, 1],
+                  duration: 1200,
+                  easing: 'easeOutQuart',
+                });
+                
+                const contentElements = entry.target.querySelectorAll('.content-box > *, .animate-children > *');
+                if(contentElements.length > 0) {
+                  (anime)({ 
+                      targets: contentElements,
+                      opacity: [0, 1],
+                      translateY: [40, 0],
+                      delay: anime.stagger(150, {start: 400}), 
+                      duration: 900,
+                      easing: 'easeOutCirc'
+                  });
+                }
+                observer.unobserve(entry.target);
+              }
+            },
+            { threshold: 0.1 } 
+          );
+
+          observer.observe(currentRef);
+          return () => {
+              if (currentRef) { 
+                  observer.unobserve(currentRef);
+              }
+          };
+        }, []);
+
+        return (
+          React.createElement("section", { id: id, ref: sectionRef, className: "section relative" },
+            React.createElement("div", { className: "container mx-auto text-center" },
+              React.createElement("h2", { className: "section-title text-custom-primary-hover mb-12 animate-glow", style: { animationDelay: '0.1s' } }, title),
+              React.createElement("div", { className: "animate-children" }, 
+                children
+              )
+            )
+          )
+        );
+      };
+      
+      const ThreeDeeCertificate = ({ certification }) => {
+        const mountRef = useRef(null);
+        const sceneRef = useRef(null);
+        const cameraRef = useRef(null);
+        const rendererRef = useRef(null);
+        const meshRef = useRef(null);
+        const animationFrameIdRef = useRef(null);
+        
+        const initialEmissiveIntensity = 0.1;
+        const hoverEmissiveIntensity = 0.5;
+
+        const createCertificateTexture = (cert) => {
+          const canvas = document.createElement('canvas');
+          const ctx = canvas.getContext('2d');
+          if (!ctx) { 
+              const errorCanvas = document.createElement('canvas');
+              errorCanvas.width = 512; errorCanvas.height = 384;
+              const errCtx = errorCanvas.getContext('2d');
+              if(errCtx){
+                  errCtx.fillStyle = '#333'; errCtx.fillRect(0,0,512,384);
+                  errCtx.fillStyle = '#FFF'; errCtx.font = '20px Arial'; errCtx.textAlign = 'center';
+                  errCtx.fillText('Error creating canvas', 256, 192);
+              }
+              return new THREE.CanvasTexture(errorCanvas);
+          }
+
+          const canvasWidth = 620; 
+          const canvasHeight = 440; 
+          canvas.width = canvasWidth;
+          canvas.height = canvasHeight;
+
+          let bgColor = '#E0E0E0'; 
+          let borderColor = '#808080'; 
+          let textColor = '#1A1A1A'; 
+          let accentColor = '#303030'; 
+          let specificCertTitle = "";
+
+          if (cert.id === 'cpp') {
+              bgColor = '#E0E8F0'; 
+              borderColor = '#4A90E2'; 
+              textColor = '#1C3A56'; 
+              accentColor = '#3C6CA0';
+              specificCertTitle = 'C++ Essentials 1';
+          } else if (cert.id === 'html') {
+              bgColor = '#FFF0E5'; 
+              borderColor = '#E67E22'; 
+              textColor = '#A35200'; 
+              accentColor = '#D35400';
+              specificCertTitle = 'HTML Essentials 1';
+          } else if (cert.id === 'js') {
+              bgColor = '#FFF9C4'; 
+              borderColor = '#F1C40F'; 
+              textColor = '#4A4A4A'; 
+              accentColor = '#B7950B';
+              specificCertTitle = 'JavaScript Essentials 1';
+          }
+
+          ctx.fillStyle = bgColor;
+          ctx.fillRect(0, 0, canvasWidth, canvasHeight);
+
+          ctx.strokeStyle = borderColor;
+          ctx.lineWidth = 16;
+          ctx.strokeRect(ctx.lineWidth / 2, ctx.lineWidth / 2, canvasWidth - ctx.lineWidth, canvasHeight - ctx.lineWidth);
+          
+          ctx.strokeStyle = accentColor; 
+          ctx.lineWidth = 6;
+          ctx.strokeRect(ctx.lineWidth + 10, ctx.lineWidth + 10, canvasWidth - (ctx.lineWidth + 10)*2, canvasHeight - (ctx.lineWidth + 10)*2);
+
+          ctx.fillStyle = textColor;
+          ctx.font = 'bold 32px "Inter", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.fillText(specificCertTitle, canvasWidth / 2, 80);
+
+          ctx.font = 'normal 18px "Inter", sans-serif';
+          ctx.fillStyle = accentColor;
+          ctx.fillText(cert.name, canvasWidth / 2, 125);
+          
+          ctx.font = 'italic 20px "Inter", sans-serif';
+          ctx.fillStyle = textColor;
+          ctx.fillText('Certificat de Réussite Numérique', canvasWidth / 2, 170);
+
+          const signatureY = canvasHeight - 110;
+          ctx.strokeStyle = accentColor;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(canvasWidth * 0.12, signatureY + 5);
+          ctx.lineTo(canvasWidth * 0.50, signatureY + 5);
+          ctx.stroke();
+
+          ctx.font = 'italic 22px "Brush Script MT", "Comic Sans MS", cursive'; 
+          ctx.fillStyle = textColor;
+          ctx.textAlign = 'left';
+          const signatureText = "Normand Lampron"; 
+          ctx.fillText(signatureText, canvasWidth * 0.12, signatureY);
+          
+          const dateY = canvasHeight - 70;
+          ctx.strokeStyle = accentColor;
+          ctx.lineWidth = 1;
+          ctx.beginPath();
+          ctx.moveTo(canvasWidth * 0.12, dateY + 5);
+          ctx.lineTo(canvasWidth * 0.50, dateY + 5);
+          ctx.stroke();
+          
+          ctx.font = 'normal 16px "Inter", sans-serif';
+          ctx.fillStyle = accentColor;
+          ctx.textAlign = 'left';
+          ctx.fillText(cert.completionDate || SUBMISSION_DATE, canvasWidth * 0.12, dateY);
+          ctx.fillText("Délivré le: ", canvasWidth * 0.12 - 80, dateY);
+
+          const sealRadius = 38;
+          const sealPadding = 25;
+          const sealX = canvasWidth - sealRadius - sealPadding;
+          const sealY = canvasHeight - sealRadius - sealPadding - 15; 
+
+          ctx.beginPath();
+          ctx.arc(sealX, sealY, sealRadius, 0, Math.PI * 2, false);
+          ctx.fillStyle = '#D9534F'; 
+          ctx.fill();
+          ctx.strokeStyle = '#B84440'; 
+          ctx.lineWidth = 3;
+          ctx.stroke();
+
+          ctx.fillStyle = '#FFD700'; 
+          ctx.font = 'bold 38px "Inter", sans-serif';
+          ctx.textAlign = 'center';
+          ctx.textBaseline = 'middle';
+          ctx.fillText('★', sealX, sealY);
+
+          const texture = new THREE.CanvasTexture(canvas);
+          texture.colorSpace = THREE.SRGBColorSpace;
+          texture.needsUpdate = true;
+          return texture;
+        };
+
+        useEffect(() => {
+          if (!mountRef.current || typeof window === 'undefined') return;
+
+          const currentMount = mountRef.current; 
+
+          sceneRef.current = new THREE.Scene();
+          cameraRef.current = new THREE.PerspectiveCamera(50, currentMount.clientWidth / currentMount.clientHeight, 0.1, 1000);
+          cameraRef.current.position.z = 2.9; 
+
+          rendererRef.current = new THREE.WebGLRenderer({ alpha: true, antialias: true });
+          rendererRef.current.setSize(currentMount.clientWidth, currentMount.clientHeight);
+          rendererRef.current.setPixelRatio(window.devicePixelRatio);
+          currentMount.appendChild(rendererRef.current.domElement);
+
+          const ambientLight = new THREE.AmbientLight(0xE0E0E0, 1.1); 
+          sceneRef.current.add(ambientLight);
+          const dirLight1 = new THREE.DirectionalLight(0xffffff, 1.3);
+          dirLight1.position.set(5, 8, 12); 
+          sceneRef.current.add(dirLight1);
+          const dirLight2 = new THREE.DirectionalLight(0xf0f0f0, 0.8);
+          dirLight2.position.set(-5, -4, 10);
+          sceneRef.current.add(dirLight2);
+
+          const certificateTexture = createCertificateTexture(certification); 
+          
+          const aspectRatio = certificateTexture.image.width / certificateTexture.image.height;
+          const planeHeight = 2.0; 
+          const geometry = new THREE.PlaneGeometry(planeHeight * aspectRatio, planeHeight);
+          
+          const material = new THREE.MeshStandardMaterial({
+            map: certificateTexture,
+            metalness: 0.0, 
+            roughness: 0.7, 
+            side: THREE.DoubleSide,
+            emissive: '#C0C0C0', 
+            emissiveIntensity: initialEmissiveIntensity,
+          });
+          
+          meshRef.current = new THREE.Mesh(geometry, material);
+          meshRef.current.rotation.x = -0.03;
+          sceneRef.current?.add(meshRef.current);
+
+          const clock = new THREE.Clock();
+          const animateLoop = () => {
+            animationFrameIdRef.current = requestAnimationFrame(animateLoop);
+            const elapsedTime = clock.getElapsedTime();
+            if (meshRef.current && !meshRef.current.userData.isHovering) {
+              meshRef.current.rotation.y = Math.sin(elapsedTime * 0.25) * 0.12; 
+              meshRef.current.rotation.x = Math.cos(elapsedTime * 0.18) * 0.04 - 0.03;
+            }
+            if (sceneRef.current && cameraRef.current && rendererRef.current) {
+              rendererRef.current.render(sceneRef.current, cameraRef.current);
+            }
+          };
+          animateLoop();
+
+          const handleResize = () => {
+            if (currentMount && rendererRef.current && cameraRef.current) {
+              const width = currentMount.clientWidth;
+              const height = currentMount.clientHeight;
+              rendererRef.current.setSize(width, height);
+              cameraRef.current.aspect = width / height;
+              cameraRef.current.updateProjectionMatrix();
+            }
+          };
+          window.addEventListener('resize', handleResize);
+
+          return () => {
+            if(animationFrameIdRef.current) cancelAnimationFrame(animationFrameIdRef.current);
+            window.removeEventListener('resize', handleResize);
+            
+            certificateTexture.dispose();
+            meshRef.current?.geometry?.dispose();
+            if (meshRef.current?.material) {
+              const mat = meshRef.current.material;
+              if (Array.isArray(mat)) mat.forEach(m => m.dispose());
+              else mat.dispose();
+            }
+            
+            sceneRef.current?.traverse(object => {
+              if (object instanceof THREE.Mesh) {
+                object.geometry?.dispose();
+                if (Array.isArray(object.material)) {
+                  object.material.forEach(material => material.dispose());
+                } else if (object.material) {
+                  object.material.dispose();
+                }
+              }
+            });
+            rendererRef.current?.dispose();
+             if (currentMount && rendererRef.current?.domElement && currentMount.contains(rendererRef.current.domElement)) {
+                currentMount.removeChild(rendererRef.current.domElement);
+            }
+          };
+        }, [certification.id, certification.name, certification.completionDate]); 
+
+        const handleMouseEnter = () => {
+          if (meshRef.current) {
+            meshRef.current.userData.isHovering = true;
+            anime.remove(meshRef.current.scale); 
+            anime.remove(meshRef.current.rotation); 
+            anime.remove(meshRef.current.material); 
+
+            anime({ 
+              targets: meshRef.current.scale,
+              x: 1.2, y: 1.2, z: 1.2,
+              duration: 400, easing: 'easeOutExpo'
+            });
+            anime({ 
+              targets: meshRef.current.material,
+              emissiveIntensity: hoverEmissiveIntensity,
+              duration: 400, easing: 'easeOutExpo'
+            });
+            anime({ 
+              targets: meshRef.current.rotation,
+              x: THREE.MathUtils.degToRad(-8 + (Math.random() - 0.5) * 6), 
+              y: THREE.MathUtils.degToRad((Math.random() - 0.5) * 20),     
+              z: THREE.MathUtils.degToRad((Math.random() - 0.5) * 12),      
+              duration: 600, easing: 'easeOutBack'
+            });
+          }
+        };
+
+        const handleMouseLeave = () => {
+          if (meshRef.current) {
+            meshRef.current.userData.isHovering = false;
+            anime.remove(meshRef.current.scale); 
+            anime.remove(meshRef.current.rotation); 
+            anime.remove(meshRef.current.material); 
+
+            anime({ 
+              targets: meshRef.current.scale,
+              x: 1, y: 1, z: 1,
+              duration: 500, easing: 'easeOutExpo'
+            });
+            anime({ 
+              targets: meshRef.current.material,
+              emissiveIntensity: initialEmissiveIntensity,
+              duration: 500, easing: 'easeOutExpo'
+            });
+            anime({ 
+              targets: meshRef.current.rotation,
+              x: -0.03, 
+              y: 0,
+              z: 0,
+              duration: 700, easing: 'easeOutElastic(1, .7)'
+            });
+          }
+        };
+
+        return (
+          React.createElement("div", { 
+            ref: mountRef, 
+            className: "w-full h-64 md:h-80 rounded-xl overflow-hidden shadow-2xl border border-custom-secondary/40 relative group cursor-pointer bg-custom-card/30",
+            onMouseEnter: handleMouseEnter,
+            onMouseLeave: handleMouseLeave,
+            role: "figure",
+            "aria-label": `Modèle 3D interactif de la certification: ${certification.name}`
+          },
+           React.createElement("div", { className: "absolute inset-0 bg-black/50 group-hover:bg-black/20 transition-all duration-400 flex items-center justify-center pointer-events-none opacity-0 group-hover:opacity-100" },
+              React.createElement("p", { className: "text-custom-primary-hover text-center opacity-0 group-hover:opacity-100 transition-opacity duration-300 delay-100 text-base md:text-lg font-semibold p-3 md:p-4 bg-custom-dark/70 rounded-md shadow-lg" },
+                certification.name
+              )
+           )
+        ));
+      };
+
+      // Section Components
+      const AccueilSection = () => (
+        React.createElement("div", { className: "flex flex-col items-center justify-center h-full text-center" },
+          React.createElement("h1", { 
+            className: "text-5xl md:text-7xl font-extrabold mb-5 text-custom-primary-hover animate-glow",
+            style: { textShadow: '0 0 8px #A9A9A9, 0 0 18px #C0C0C0, 0 0 28px #E0E0E0' }
+          }, PORTFOLIO_OWNER_NAME),
+          React.createElement("p", { className: "text-xl md:text-2xl text-custom-text mb-3" }, "Portfolio Numérique Interactif Avancé"),
+          React.createElement("p", { className: "text-lg text-custom-text-muted mb-10" }, `${YOUR_COURSE} - ${SUBMISSION_DATE}`),
+          React.createElement("button", {
+            onClick: () => smoothScrollTo('cheminement'),
+            className: "px-10 py-4 bg-custom-primary text-custom-dark font-bold text-lg rounded-lg hover:bg-custom-primary-hover transform hover:scale-105 transition-all duration-300 shadow-xl hover:shadow-custom-primary/40 focus:outline-none focus:ring-4 focus:ring-custom-primary/50",
+            "aria-label": "Explorer mon portfolio et mon cheminement"
+          }, "Découvrir Mon Parcours Évolutif")
+        )
+      );
+
+      const CheminementSection = () => (
+        React.createElement("div", { className: "content-box space-y-8 text-left max-w-3xl mx-auto" }, 
+          React.createElement("div", null,
+            React.createElement("h3", { className: "text-xl font-semibold text-custom-primary mb-3" }, "Qu’as-tu appris ce semestre en ICS3U ?"),
+            React.createElement("p", { className: "text-custom-text-muted leading-relaxed" },
+              "Ce semestre en ICS3U a été une immersion profonde et stimulante dans l'univers de l'informatique. J'ai solidifié ma compréhension de la logique algorithmique, apprenant à décomposer des problèmes complexes en étapes gérables et à concevoir des solutions efficientes. La programmation structurée, principalement explorée via Python, m'a permis de maîtriser les variables, les opérateurs, les structures de contrôle itératives et conditionnelles, ainsi que des structures de données fondamentales telles que les listes, les tuples et les dictionnaires. Un accent particulier a été mis sur la conception de fonctions modulaires et réutilisables, améliorant la clarté et la maintenabilité du code. Parallèlement, les certifications Cisco en C++, HTML et JavaScript ont offert des perspectives cruciales : le C++ m'a initié au développement bas niveau et à la gestion de la mémoire, tandis que HTML et JavaScript m'ont ouvert les portes du développement web, me permettant de comprendre comment structurer l'information et créer des interactions dynamiques. L'apprentissage de Git et des plateformes comme GitHub a été fondamental pour la gestion de version, le travail collaboratif et le suivi rigoureux des évolutions de mes projets."
+            )
+          ),
+          React.createElement("div", null,
+            React.createElement("h3", { className: "text-xl font-semibold text-custom-primary mb-3" }, "Quelles difficultés as-tu rencontrées et comment les as-tu surmontées ?"),
+            React.createElement("p", { className: "text-custom-text-muted leading-relaxed" },
+              "L'une des difficultés majeures a été l'abstraction requise pour certains concepts, notamment les pointeurs et la gestion manuelle de la mémoire en C++, ou encore la nature asynchrone de JavaScript et la manipulation du DOM. La transition d'une pensée séquentielle à une pensée événementielle ou parallèle a demandé un ajustement cognitif. Le débogage de problèmes subtils, où l'erreur n'était pas immédiatement apparente, s'est avéré parfois long et exigeant. Pour surmonter ces défis, j'ai adopté une stratégie proactive : je décortiquais les problèmes en sous-problèmes plus petits, j'utilisais intensivement les outils de débogage (breakpoints, watch expressions dans VS Code), et je consultais de manière ciblée la documentation officielle (MDN pour le web, cppreference.com pour C++). Les forums communautaires comme Stack Overflow ont été une ressource précieuse, non pas pour copier des solutions, mais pour comprendre différentes approches. J'ai également mis en place des sessions de \"rubber ducking\" et collaboré activement avec mes pairs, expliquant mes problèmes à voix haute pour clarifier ma propre pensée. La clé a été la persévérance et la conviction que chaque bug résolu était une leçon apprise."
+            )
+          ),
+          React.createElement("div", null,
+            React.createElement("h3", { className: "text-xl font-semibold text-custom-primary mb-3" }, "Qu’est-ce qui t’a motivé ou surpris dans ton apprentissage ?"),
+            React.createElement("p", { className: "text-custom-text-muted leading-relaxed" },
+              "La motivation principale est venue du pouvoir de création intrinsèque à la programmation : la capacité de transformer une idée abstraite en une application tangible et fonctionnelle. Visualiser une page web s'animer grâce à JavaScript, ou optimiser un algorithme en C++ pour qu'il s'exécute plus rapidement, procure une satisfaction immense. J'ai été agréablement surpris par la vastitude et l'interconnectivité de l'écosystème du développement : la manière dont différents langages, bibliothèques et outils s'articulent pour créer des systèmes complexes est fascinante. La culture de partage de connaissances au sein de la communauté open-source m'a également beaucoup marqué. Le sentiment d'\"eurêka\" après avoir surmonté un obstacle technique particulièrement ardu, ou après avoir enfin compris un concept complexe, est devenu une véritable force motrice, nourrissant ma curiosité et mon désir d'apprendre toujours plus. L'aspect collaboratif, même à distance, et la possibilité de s'appuyer sur le travail d'autres développeurs pour construire des choses encore plus grandes, m'ont profondément inspiré."
+            )
+          )
+        )
+      );
+
+      const CertificationsSection = () => (
+        React.createElement("div", { className: "w-full max-w-6xl mx-auto" },
+          React.createElement("div", { className: "grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-8 md:gap-10" },
+            CERTIFICATION_DATA.map((cert) => (
+              React.createElement("div", { key: cert.id, className: "bg-custom-card p-5 rounded-xl shadow-xl border border-custom-secondary/25 hover:border-custom-primary/50 transition-all duration-300 flex flex-col space-y-4 group hover:shadow-custom-primary/10 transform hover:-translate-y-2" }, 
+                React.createElement(ThreeDeeCertificate, { certification: cert }),
+                React.createElement("h3", { className: "text-xl font-bold text-custom-primary mt-4 group-hover:text-custom-primary-hover transition-colors duration-300" }, cert.name),
+                React.createElement("p", { className: "text-sm text-custom-text-muted flex-grow" }, cert.description),
+                React.createElement("details", { className: "text-left" },
+                  React.createElement("summary", { className: "text-custom-text-muted hover:text-custom-primary text-sm font-medium cursor-pointer transition-colors duration-200 py-2 inline-flex items-center group/summary" },
+                    "Explorer les détails",
+                    React.createElement("svg", { className: "ml-2 w-4 h-4 transform transition-transform duration-300 group-open/summary:rotate-90 group-hover/summary:text-custom-primary-hover", fill: "none", stroke: "currentColor", viewBox: "0 0 24 24", xmlns: "http://www.w3.org/2000/svg" }, React.createElement("path", { strokeLinecap: "round", strokeLinejoin: "round", strokeWidth: "2", d: "M9 5l7 7-7 7" }))
+                  ),
+                  React.createElement("div", { className: "mt-4 space-y-3 text-xs md:text-sm text-custom-text-muted leading-relaxed border-t border-custom-secondary/20 pt-3" },
+                    React.createElement("p", null, React.createElement("strong", null, "Lien avec mes intérêts:"), " ", cert.interests),
+                    React.createElement("p", null, React.createElement("strong", null, "Ce que j'ai appris:"), " ", cert.learned),
+                    React.createElement("p", null, React.createElement("strong", null, "Applications concrètes:"), " ", cert.applications),
+                    React.createElement("p", null, React.createElement("strong", null, "Impact potentiel:"), " ", cert.impact)
+                  )
+                )
+              )
+            ))
+          )
+        )
+      );
+
+      const AvenirSection = () => (
+        React.createElement("div", { className: "content-box space-y-8 text-left max-w-3xl mx-auto" },
+          React.createElement("div", null,
+            React.createElement("h3", { className: "text-xl font-semibold text-custom-primary mb-3" }, "Mon intérêt pour une carrière dans le secteur médico-technologique :"),
+            React.createElement("p", { className: "text-custom-text-muted leading-relaxed" },
+              "Mon aspiration à une carrière dans le secteur médico-technologique est alimentée par une conviction profonde : la technologie peut et doit être un levier majeur pour améliorer la santé et le bien-être humain. Je suis particulièrement fasciné par l'application de l'intelligence artificielle pour l'analyse prédictive des maladies et l'aide au diagnostic, imaginant des systèmes capables de détecter des pathologies à un stade précoce. Le développement de logiciels pour dispositifs médicaux connectés (IoT), tels que les capteurs portables qui surveillent en continu les signes vitaux et alertent en cas d'anomalie, représente une autre avenue passionnante. La bio-informatique, avec son potentiel pour décoder les complexités du génome et personnaliser les traitements, m'attire également. Enfin, la création d'applications e-santé intuitives et sécurisées pour faciliter la communication patient-médecin, le suivi thérapeutique à distance et l'accès à l'information médicale fiable, me semble cruciale. Contribuer à ces avancées, qui ont un impact direct et tangible sur la qualité de vie, est une source de motivation intrinsèque et un objectif de carrière stimulant."
+            )
+          ),
+          React.createElement("div", null,
+            React.createElement("h3", { className: "text-xl font-semibold text-custom-primary mb-3" }, "Compétences acquises pertinentes pour ce secteur :"),
+            React.createElement("p", { className: "text-custom-text-muted leading-relaxed" },
+              "Mon parcours en ICS3U m'a fourni une base solide en pensée algorithmique et en résolution structurée de problèmes, des compétences transférables à n'importe quel défi de développement. Les certifications Cisco ont spécifiquement aiguisé des aptitudes techniques clés : ma maîtrise de C++ est directement applicable au développement de logiciels embarqués performants et fiables pour les dispositifs médicaux, ou à des modules de calcul intensif pour l'analyse de données médicales. Les compétences en HTML et JavaScript sont indispensables pour la création d'interfaces utilisateur modernes et accessibles pour les applications de santé, qu'il s'agisse de portails web pour les patients ou de tableaux de bord analytiques pour les cliniciens. Au-delà de ces aspects techniques, j'ai cultivé une grande capacité d'analyse critique, un souci du détail méticuleux – essentiel dans un domaine où l'erreur peut avoir des conséquences graves – et une aptitude éprouvée à assimiler rapidement de nouvelles technologies et de nouveaux paradigmes, ce qui est vital dans un secteur en constante évolution comme la médico-technologie."
+            )
+          ),
+          React.createElement("div", null,
+            React.createElement("h3", { className: "text-xl font-semibold text-custom-primary mb-3" }, "Formations et démarches d’admission envisagées :"),
+            React.createElement("p", { className: "text-custom-text-muted leading-relaxed" },
+              "Pour concrétiser mes ambitions, j'envisage activement des programmes universitaires spécialisés. Le Génie Biomédical, qui combine ingénierie et sciences de la vie, m'attire particulièrement, tout comme l'Informatique de la Santé (Health Informatics), qui se concentre sur la gestion et l'analyse des données de santé. Un baccalauréat en Sciences Informatiques avec une mineure en biologie ou en sciences de la santé, ou des cours spécialisés en IA et santé, sont également des options que j'explore. Des institutions canadiennes de renom telles que l'Université de Waterloo, l'Université de Toronto, McGill, UBC, et l'Université de Montréal offrent des cursus d'excellence dans ces domaines. Mes démarches actuelles incluent la recherche approfondie des prérequis académiques, la préparation pour les tests d'admission potentiels, et la prise de contact avec les départements concernés pour mieux comprendre leurs programmes. Je prévois également d'assister à des journées portes ouvertes virtuelles et de solliciter des conseils d'orientation. En parallèle, je surveille les opportunités de certifications complémentaires, par exemple en sécurité des systèmes d'information de santé (comme le CISSP avec une spécialisation santé) ou sur des normes d'interopérabilité (HL7, FHIR)."
+            )
+          ),
+          React.createElement("div", null,
+            React.createElement("h3", { className: "text-xl font-semibold text-custom-primary mb-3" }, "Préparation aux entrevues et évaluations :"),
+            React.createElement("p", { className: "text-custom-text-muted leading-relaxed" },
+              "Ma préparation aux futures entrevues et évaluations est une démarche continue. Elle commence par une veille active sur les innovations et les acteurs clés du secteur médico-technologique canadien et international. Je constitue un portfolio de projets personnels robustes, dont cette application est un exemple concret, pour illustrer mes compétences techniques et ma capacité à mener un projet à terme. Je m'entraîne à articuler clairement mes motivations et mes projets de carrière. Pour les aspects techniques, je révise régulièrement les concepts fondamentaux de l'informatique et des langages que je maîtrise, et je m'exerce sur des plateformes de codage pour affûter mes compétences en résolution de problèmes. Je me prépare également à discuter de manière approfondie des aspects éthiques et réglementaires spécifiques au domaine de la santé. Simuler des entrevues avec des mentors ou des pairs, et solliciter un feedback constructif, font partie intégrante de ma stratégie pour aborder ces étapes avec confiance et professionnalisme."
+            )
+          )
+        )
+      );
+
+      const SavoirEtreSection = () => (
+        React.createElement("div", { className: "content-box space-y-8 text-left max-w-3xl mx-auto" },
+          React.createElement("div", null,
+            React.createElement("h3", { className: "text-xl font-semibold text-custom-primary mb-3" }, "a) Compétences personnelles et habitudes de travail clés (au moins 6) :"),
+            React.createElement("ul", { className: "list-disc list-inside text-custom-text-muted leading-relaxed space-y-2" },
+              React.createElement("li", null, React.createElement("strong", null, "Résolution de Problèmes Analytique :"), " Capacité démontrée à décomposer des défis complexes en composantes gérables et à élaborer des solutions logiques et efficaces, comme lors de l'optimisation d'algorithmes ou du débogage de systèmes multi-fichiers en C++."),
+              React.createElement("li", null, React.createElement("strong", null, "Persévérance et Résilience :"), " Détermination à surmonter les obstacles techniques et les échecs, en persistant dans la recherche de solutions même face à des bugs récalcitrants ou des concepts difficiles à appréhender, considérant chaque difficulté comme une opportunité d'apprentissage."),
+              React.createElement("li", null, React.createElement("strong", null, "Curiosité Intellectuelle Proactive :"), " Un désir constant d'apprendre et d'explorer au-delà des exigences du cursus, par exemple en investiguant de nouvelles bibliothèques JavaScript ou en étudiant les principes de design d'API RESTful pour des applications futures."),
+              React.createElement("li", null, React.createElement("strong", null, "Organisation et Gestion du Temps Stratégique :"), " Aptitude à planifier et prioriser les tâches de manière efficace, en utilisant des outils de gestion de projet (même simples comme des listes de tâches structurées) pour respecter les échéances et gérer la charge de travail sur plusieurs projets simultanément."),
+              React.createElement("li", null, React.createElement("strong", null, "Esprit Collaboratif et Communication Efficace :"), " Expérience avérée dans le travail d'équipe sur des projets scolaires, incluant le partage constructif de connaissances, l'intégration des contributions diverses, et la communication claire des idées techniques à des publics variés."),
+              React.createElement("li", null, React.createElement("strong", null, "Attention Méticuleuse aux Détails :"), " Un engagement envers la précision et la qualité dans toutes les phases du développement, de la conception initiale à la vérification finale du code, crucial pour la fiabilité et la sécurité des applications."),
+              React.createElement("li", null, React.createElement("strong", null, "Adaptabilité et Agilité d'Apprentissage :"), " Facilité à m'approprier rapidement de nouveaux langages de programmation (C++, HTML, JavaScript), des environnements de développement (VS Code, NetAcad), et des méthodologies de travail, démontrant une flexibilité cognitive essentielle dans un domaine technologique en évolution rapide.")
+            )
+          ),
+          React.createElement("div", null,
+            React.createElement("h3", { className: "text-xl font-semibold text-custom-primary mb-3" }, "b) Compétences recherchées dans le secteur médico-technologique :"),
+            React.createElement("p", { className: "text-custom-text-muted leading-relaxed" },
+              "Le secteur médico-technologique exige un ensemble unique de compétences. Au-delà de l'excellence technique, il valorise une rigueur scientifique absolue et une éthique professionnelle inébranlable, surtout concernant la confidentialité et la sécurité des données des patients (conformité aux normes comme HIPAA/PIPEDA). Une précision méticuleuse dans le développement et les tests est non négociable. La capacité à collaborer efficacement au sein d'équipes pluridisciplinaires – intégrant médecins, chercheurs, ingénieurs et designers – est primordiale. L'apprentissage continu et l'adaptabilité sont cruciaux pour suivre le rythme effréné des innovations. Enfin, des compétences en communication claires et une empathie développée envers les utilisateurs finaux (patients, personnel soignant, familles) sont indispensables pour concevoir des solutions véritablement utiles et centrées sur l'humain."
+            )
+          ),
+          React.createElement("div", null,
+            React.createElement("h3", { className: "text-xl font-semibold text-custom-primary mb-3" }, "c) Analyse personnelle : Adéquation de mes compétences :"),
+            React.createElement("p", { className: "text-custom-text-muted leading-relaxed" },
+              "Mon profil actuel s'aligne bien avec plusieurs exigences clés du secteur médico-technologique. Ma persévérance, mon attention aux détails et mes compétences analytiques en résolution de problèmes constituent une base solide. L'expérience acquise via les certifications Cisco a instillé en moi la rigueur nécessaire pour maîtriser des concepts techniques pointus et pour produire un travail de qualité. Mes projets de groupe ont cultivé mon esprit collaboratif et ma communication. Je reconnais activement la nécessité de renforcer ma connaissance des cadres réglementaires spécifiques au domaine médical (ex: normes ISO pour les dispositifs médicaux, réglementations de Santé Canada) et d'approfondir ma compréhension des enjeux éthiques liés à l'IA en santé ou à la manipulation de données génétiques. Je suis engagé dans une démarche d'auto-formation continue sur ces aspects pour combler ces écarts et me positionner comme un candidat encore plus pertinent."
+            )
+          ),
+          React.createElement("div", null,
+            React.createElement("h3", { className: "text-xl font-semibold text-custom-primary mb-3" }, "Prêt(e) pour cette profession/ces études ?"),
+            React.createElement("p", { className: "text-custom-text-muted leading-relaxed" },
+              "Absolument. Je suis non seulement prêt, mais profondément enthousiaste à l'idée de m'engager dans le secteur médico-technologique. Mes compétences techniques fondamentales sont en place et en constante amélioration, et ma soif d'apprendre est insatiable. Je comprends la complexité et les responsabilités inhérentes à ce domaine, mais c'est précisément ce défi qui m'attire. Ma passion pour l'innovation technologique, couplée à mon désir sincère de contribuer à des solutions qui améliorent concrètement la vie des gens, forme le moteur de ma détermination. Je suis pleinement conscient de l'investissement personnel et intellectuel requis et je suis prêt à le fournir pour atteindre mes objectifs et avoir un impact significatif."
+            )
+          )
+        )
+      );
+
+      // Main App Component
+      const App = () => {
+        const [activeSection, setActiveSection] = useState(SECTIONS[0].id);
+        const backgroundSceneRef = useRef(null);
+        const backgroundCameraRef = useRef(null);
+        const backgroundRendererRef = useRef(null);
+        const backgroundParticlesRef = useRef(null);
+        const mouse = useRef(new THREE.Vector2());
+        const animationFrameIdRef = useRef(null);
+
+        useEffect(() => {
+          const canvas = document.getElementById('three-canvas');
+          if (!canvas) return;
+
+          backgroundSceneRef.current = new THREE.Scene();
+          backgroundCameraRef.current = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 1800);
+          backgroundCameraRef.current.position.z = 80;
+
+          backgroundRendererRef.current = new THREE.WebGLRenderer({ canvas, alpha: true, antialias: true });
+          backgroundRendererRef.current.setSize(window.innerWidth, window.innerHeight);
+          backgroundRendererRef.current.setPixelRatio(window.devicePixelRatio);
+
+          const particleCount = 12000; 
+          const particlesGeometry = new THREE.BufferGeometry();
+          const posArray = new Float32Array(particleCount * 3);
+          const colorArray = new Float32Array(particleCount * 3);
+
+          const primaryColor = new THREE.Color(0x909090); 
+          const secondaryColor = new THREE.Color(0x505050);
+          const accentColor = new THREE.Color(0xD8D8D8); 
+
+          for (let i = 0; i < particleCount; i++) {
+            posArray[i * 3 + 0] = (Math.random() - 0.5) * 1800;
+            posArray[i * 3 + 1] = (Math.random() - 0.5) * 1800;
+            posArray[i * 3 + 2] = (Math.random() - 0.5) * 1800;
+
+            const randomChoice = Math.random();
+            let color;
+            if (randomChoice < 0.55) color = primaryColor;
+            else if (randomChoice < 0.85) color = secondaryColor;
+            else color = accentColor;
+            
+            colorArray[i*3+0] = color.r;
+            colorArray[i*3+1] = color.g;
+            colorArray[i*3+2] = color.b;
+          }
+          particlesGeometry.setAttribute('position', new THREE.BufferAttribute(posArray, 3));
+          particlesGeometry.setAttribute('color', new THREE.BufferAttribute(colorArray, 3));
+          
+          const particleMaterial = new THREE.PointsMaterial({
+            size: 0.08, 
+            vertexColors: true,
+            transparent: true,
+            opacity: 0.5, 
+            blending: THREE.AdditiveBlending,
+            depthWrite: false,
+            sizeAttenuation: true,
+          });
+          backgroundParticlesRef.current = new THREE.Points(particlesGeometry, particleMaterial);
+          backgroundSceneRef.current.add(backgroundParticlesRef.current);
+
+          const clock = new THREE.Clock();
+          const animateBackground = () => {
+            const elapsedTime = clock.getElapsedTime();
+            if (backgroundParticlesRef.current) {
+              backgroundParticlesRef.current.rotation.y = elapsedTime * 0.007; 
+              backgroundParticlesRef.current.rotation.x = elapsedTime * 0.0015;
+              backgroundParticlesRef.current.position.z = Math.sin(elapsedTime * 0.08) * 15 - 25; 
+            }
+            if (backgroundCameraRef.current && backgroundSceneRef.current && backgroundRendererRef.current) {
+                backgroundCameraRef.current.position.x += (mouse.current.x * 20 - backgroundCameraRef.current.position.x) * 0.012; 
+                backgroundCameraRef.current.position.y += (-mouse.current.y * 20 - backgroundCameraRef.current.position.y) * 0.012;
+                backgroundCameraRef.current.lookAt(new THREE.Vector3(0,0, backgroundParticlesRef.current?.position.z || 0)); 
+                backgroundRendererRef.current.render(backgroundSceneRef.current, backgroundCameraRef.current);
+            }
+            animationFrameIdRef.current = requestAnimationFrame(animateBackground);
+          };
+          animateBackground();
+
+          const handleMouseMove = (event) => {
+              mouse.current.x = (event.clientX / window.innerWidth) * 2 - 1;
+              mouse.current.y = -(event.clientY / window.innerHeight) * 2 + 1;
+          };
+          window.addEventListener('mousemove', handleMouseMove, { passive: true });
+          
+          const handleResize = () => {
+            if (backgroundCameraRef.current && backgroundRendererRef.current) {
+              backgroundCameraRef.current.aspect = window.innerWidth / window.innerHeight;
+              backgroundCameraRef.current.updateProjectionMatrix();
+              backgroundRendererRef.current.setSize(window.innerWidth, window.innerHeight);
+              backgroundRendererRef.current.setPixelRatio(window.devicePixelRatio);
+            }
+          };
+          window.addEventListener('resize', handleResize);
+
+          return () => {
+            if(animationFrameIdRef.current) {
+              cancelAnimationFrame(animationFrameIdRef.current);
+            }
+            window.removeEventListener('mousemove', handleMouseMove);
+            window.removeEventListener('resize', handleResize);
+            
+            backgroundParticlesRef.current?.geometry.dispose();
+            backgroundParticlesRef.current?.material?.dispose();
+            backgroundSceneRef.current?.traverse(object => {
+                if (object instanceof THREE.Mesh || object instanceof THREE.Points) {
+                    object.geometry?.dispose();
+                    if (Array.isArray(object.material)) {
+                        object.material.forEach(material => material.dispose());
+                    } else if (object.material) {
+                        object.material.dispose();
+                    }
+                }
+            });
+            backgroundRendererRef.current?.dispose();
+          };
+        }, []);
+
+        const handleNavigation = (id) => {
+          smoothScrollTo(id);
+          setActiveSection(id); 
+        };
+
+        useEffect(() => {
+          const observerOptions = {
+            root: null,
+            rootMargin: '-30% 0px -60% 0px', 
+            threshold: 0.01 
+          };
+
+          const observerCallback = (entries) => {
+            entries.forEach(entry => {
+              if (entry.isIntersecting) {
+                setActiveSection(entry.target.id);
+              }
+            });
+          };
+
+          const observer = new IntersectionObserver(observerCallback, observerOptions);
+          const sectionsNodeList = document.querySelectorAll('.section');
+          sectionsNodeList.forEach(sec => observer.observe(sec));
+
+          return () => sectionsNodeList.forEach(sec => {
+              try {
+                  observer.unobserve(sec);
+              } catch (e) {
+                  // console.warn("Error unobserving section:", e, sec);
+              }
+          });
+        }, []);
+
+        return (
+          React.createElement(React.Fragment, null,
+            React.createElement(Header, { activeSection: activeSection, onNavigate: handleNavigation }),
+            React.createElement("main", { className: "flex-grow pt-[70px]" }, 
+              React.createElement(Section, { id: "accueil", title: "Bienvenue sur Mon Portfolio" },
+                React.createElement(AccueilSection, null)
+              ),
+              React.createElement(Section, { id: "cheminement", title: SECTIONS.find(s=>s.id === 'cheminement')?.title || '' },
+                React.createElement(CheminementSection, null)
+              ),
+              React.createElement(Section, { id: "certifications", title: SECTIONS.find(s=>s.id === 'certifications')?.title || '' },
+                React.createElement(CertificationsSection, null)
+              ),
+              React.createElement(Section, { id: "avenir", title: SECTIONS.find(s=>s.id === 'avenir')?.title || '' },
+                React.createElement(AvenirSection, null)
+              ),
+              React.createElement(Section, { id: "savoir-etre", title: SECTIONS.find(s=>s.id === 'savoir-etre')?.title || '' },
+                React.createElement(SavoirEtreSection, null)
+              )
+            ),
+            React.createElement("footer", { className: "py-6 text-center bg-custom-dark border-t border-custom-card/50" },
+              React.createElement("p", { className: "text-custom-text-muted text-xs md:text-sm" },
+                  `© 2025 ${PORTFOLIO_OWNER_NAME}. Tous droits réservés.`
+              )
+            )
+          )
+        );
+      };
+
+      const rootElement = document.getElementById('root');
+      if (rootElement) {
+        const root = ReactDOM.createRoot(rootElement);
+        root.render(
+          React.createElement(React.StrictMode, null,
+            React.createElement(Suspense, { fallback: React.createElement("div", { className: "fixed inset-0 bg-custom-dark flex items-center justify-center text-custom-primary text-xl font-semibold" }, "Chargement du Portfolio Numérique Interactif...") },
+              React.createElement(App, null)
+            )
+          )
+        );
+      }
+    </script>
+</body>
+</html>
